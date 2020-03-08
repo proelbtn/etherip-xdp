@@ -1,2 +1,4 @@
 src/python/etherip_pb2_grpc.py
 src/python/etherip_pb2.py
+
+*.pyc
