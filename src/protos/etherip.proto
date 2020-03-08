@@ -18,7 +18,7 @@ message CreateNewEtherIPTunnelEntryResponse {
 }
 
 message AttachEncapsProgramRequest {
-  int32 ifindex = 1;
+  string ifname = 4;
   int32 entry_index = 2;
 }
 
@@ -28,7 +28,7 @@ message AttachEncapsProgramResponse {
 }
 
 message AttachDecapsProgramRequest {
-  int32 ifindex = 1;
+  string ifname = 3;
 }
 
 message AttachDecapsProgramResponse {
