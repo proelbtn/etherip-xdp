@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+service EtherIP {
+  rpc CreateNewEtherIPTunnelEntry (CreateNewEtherIPTunnelEntryRequest) returns (CreateNewEtherIPTunnelEntryResponse) {}
+  rpc AttachEncapsProgram (AttachEncapsProgramRequest) returns (AttachEncapsProgramResponse) {}
+  rpc AttachDecapsProgram (AttachDecapsProgramRequest) returns (AttachDecapsProgramResponse) {}
+}
+
+message CreateNewEtherIPTunnelEntryRequest {
+  string src_addr = 1;
+  string dst_addr = 2;
+}
+
+message CreateNewEtherIPTunnelEntryResponse {
+  int32 result = 1;
+  int32 entry_index = 2;
+  CreateNewEtherIPTunnelEntryRequest request = 3; 
+}
+
+message AttachEncapsProgramRequest {
+  int32 ifindex = 1;
+  int32 entry_index = 2;
+}
+
+message AttachEncapsProgramResponse {
+  int32 result = 1;
+  AttachEncapsProgramRequest request = 2;
+}
+
+message AttachDecapsProgramRequest {
+  int32 ifindex = 1;
+}
+
+message AttachDecapsProgramResponse {
+  int32 result = 1;
+  AttachDecapsProgramRequest request = 2;
+}
