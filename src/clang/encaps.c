@@ -18,6 +18,6 @@ BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 1024, "/sy
 
 BPF_TABLE_PINNED("hash", struct tunnel_flow, __u32, tunnel_lookup_table, 1024, "/sys/fs/bpf/tunnel_lookup_table");
 
-int entrypoint(struct *xdp_md ctx) {
+int entrypoint(struct xdp_md *ctx) {
   return XDP_PASS;
 }

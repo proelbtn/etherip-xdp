@@ -13,6 +13,6 @@ struct tunnel_entry {
   __u32 ifindex;
 };
 
-BPF_ARRAY(tunnel_entries, struct tunnel_entry, 1024);
+BPF_ARRAY(tunnel_entries, struct tunnel_entry, 16);
 
-BPF_HASH(tunnel_lookup_table, struct tunnel_flow, __u32, 1024);
+BPF_HASH(tunnel_lookup_table, struct tunnel_flow, __u32, 16);
