@@ -6,6 +6,8 @@
 #include <uapi/linux/in6.h>
 #include <uapi/linux/ipv6.h>
 
+#define IFINDEX_INVALID 0xffffffff
+
 struct tunnel_flow {
   struct in6_addr src;
   struct in6_addr dst;
@@ -16,9 +18,9 @@ struct tunnel_entry {
   __u32 ifindex;
 };
 
-BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 1024, "/sys/fs/bpf/tunnel_entries");
+BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 16, "/sys/fs/bpf/tunnel_entries");
 
-BPF_TABLE_PINNED("hash", struct tunnel_flow, __u32, tunnel_lookup_table, 1024, "/sys/fs/bpf/tunnel_lookup_table");
+BPF_TABLE_PINNED("hash", struct tunnel_flow, __u32, tunnel_lookup_table, 16, "/sys/fs/bpf/tunnel_lookup_table");
 
 static void memcpy(__u8 *dst, __u8 *src, size_t cnt) {
   while (cnt--) *dst = *src;
@@ -35,10 +37,7 @@ static int process_ip6hdr(struct xdp_md *ctx, struct ethhdr *eth) {
 
   if (ip6->nexthdr != 97) return XDP_PASS;
 
-  struct tunnel_flow flow = {};
-  memcpy((void *)&flow, (void *)ip6 + 8, 32);
-
-  __u32 *idx = tunnel_lookup_table.lookup(&flow);
+  __u32 *idx = tunnel_lookup_table.lookup((void *)ip6 + 8);
   if (idx == NULL) {
     return XDP_PASS;
   }
@@ -48,14 +47,18 @@ static int process_ip6hdr(struct xdp_md *ctx, struct ethhdr *eth) {
     return XDP_PASS;
   }
 
-  bpf_xdp_adjust_head(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr));
   
-  return bpf_redirect(entry->ifindex, 0);
+  if (entry->ifindex == IFINDEX_INVALID) {
+    return XDP_PASS;
+  }
+  else {
+    bpf_xdp_adjust_head(ctx, sizeof(struct ethhdr) + sizeof(struct ipv6hdr));
+    return bpf_redirect(entry->ifindex, 0);
+  }
 }
 
 
 int entrypoint(struct xdp_md *ctx) {
-  return XDP_PASS;
   void *data = (void *)(long)ctx->data;
   void *data_end = (void *)(long)ctx->data_end;
 

@@ -91,6 +91,9 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
     def attach_encaps_program(self, ifname, entry_index):
         with open("encaps.c", "r") as f:
             text = f.read()
+            #prog = BPF(text=text, cflags=["-DENTRY_INDEX=%d" % entry_index])
+
+            text = ("#define ENTRY_INDEX %d\n" % entry_index) + text
             prog = BPF(text=text)
 
         func = prog.load_func("entrypoint", BPF.XDP)
