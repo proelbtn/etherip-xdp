@@ -15,5 +15,3 @@ if ! which docker >/dev/null 2>&1; then
   sudo usermod -aG docker $(id -un)
 fi
 
-sudo mount bpffs /sys/fs/bpf -t bpf
-
