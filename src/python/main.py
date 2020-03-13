@@ -64,28 +64,16 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
 
     def CreateNewEtherIPTunnelEntry(self, req, ctx):
-        try:
-            remote_addr = IPv6Address(req.remote_addr)
-        except AddressValueError:
-            return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
-                    result=-1, entry_index=-1, request=req)
-
-        try:
-            local_addr = IPv6Address(req.local_addr)
-        except AddressValueError:
-            return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
-                    result=-1, entry_index=-1, request=req)
-
+        remote_addr = IPv6Address(req.remote_addr)
+        local_addr = IPv6Address(req.local_addr)
 
         flow = TunnelFlow(c_ipv6_addr(*remote_addr.packed), c_ipv6_addr(*local_addr.packed))
         entry_index = self.create_new_etherip_tunnel_entry(flow)
 
         if entry_index is None:
-            return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
-                    result=-1, entry_index=entry_index, request=req)
+            pass
 
-        return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
-                result=0, entry_index=entry_index, request=req)
+        return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(entry_index=entry_index, request=req)
 
 
     def attach_encaps_program(self, ifname, entry_index):
@@ -106,22 +94,12 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
         self.entries[c_uint(entry_index)] = entry
 
-        return 0
-
 
     def AttachEncapsProgram(self, req, ctx):
         ifname = req.ifname
-
-        try:
-            entry_index = int(req.entry_index)
-        except ValueError:
-            return etherip_pb2.AttachEncapsProgramResponse(
-                    result=-1, request=req)
-
-        res = self.attach_encaps_program(ifname, entry_index)
-
-        return etherip_pb2.AttachEncapsProgramResponse(
-                result=res, request=req)
+        entry_index = int(req.entry_index)
+        self.attach_encaps_program(ifname, entry_index)
+        return etherip_pb2.AttachEncapsProgramResponse(request=req)
 
 
     def attach_decaps_program(self, ifname):
@@ -134,16 +112,11 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
         self.decaps_progs.append(prog)
 
-        return 0
-
 
     def AttachDecapsProgram(self, req, ctx):
         ifname = req.ifname
-
-        res = self.attach_decaps_program(ifname)
-
-        return etherip_pb2.AttachDecapsProgramResponse(
-                result=res, request=req)
+        self.attach_decaps_program(ifname)
+        return etherip_pb2.AttachDecapsProgramResponse(request=req)
 
 
 def main():

@@ -13,7 +13,6 @@ message CreateNewEtherIPTunnelEntryRequest {
 }
 
 message CreateNewEtherIPTunnelEntryResponse {
-  int32 result = 1;
   int32 entry_index = 2;
   CreateNewEtherIPTunnelEntryRequest request = 3; 
 }
@@ -24,7 +23,6 @@ message AttachEncapsProgramRequest {
 }
 
 message AttachEncapsProgramResponse {
-  int32 result = 1;
   AttachEncapsProgramRequest request = 2;
 }
 
@@ -33,6 +31,5 @@ message AttachDecapsProgramRequest {
 }
 
 message AttachDecapsProgramResponse {
-  int32 result = 1;
   AttachDecapsProgramRequest request = 2;
 }

@@ -13,13 +13,15 @@ def main():
                 local_addr="2400:2410:c0e1:f500:5054:ff:febb:5cfb"))
         print(res)
 
+        entry_index = res.entry_index
+
         res = stub.AttachDecapsProgram(etherip_pb2.AttachDecapsProgramRequest(
                 ifname="enp2s0"))
         print(res)
 
         res = stub.AttachEncapsProgram(etherip_pb2.AttachEncapsProgramRequest(
                 ifname="enp3s0",
-                entry_index=0))
+                entry_index=entry_index))
         print(res)
 
 
