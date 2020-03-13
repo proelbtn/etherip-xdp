@@ -24,6 +24,14 @@ def main():
                 entry_index=entry_index))
         print(res)
 
+        res = stub.DetachDecapsProgram(etherip_pb2.DetachDecapsProgramRequest(
+                ifname="enp2s0"))
+        print(res)
+
+        res = stub.DetachEncapsProgram(etherip_pb2.DetachEncapsProgramRequest(
+                ifname="enp3s0"))
+        print(res)
+
 
 if __name__ == "__main__":
     main()

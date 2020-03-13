@@ -5,6 +5,9 @@ service EtherIP {
 
   rpc AttachEncapsProgram (AttachEncapsProgramRequest) returns (AttachEncapsProgramResponse) {}
   rpc AttachDecapsProgram (AttachDecapsProgramRequest) returns (AttachDecapsProgramResponse) {}
+
+  rpc DetachEncapsProgram (DetachEncapsProgramRequest) returns (DetachEncapsProgramResponse) {}
+  rpc DetachDecapsProgram (DetachDecapsProgramRequest) returns (DetachDecapsProgramResponse) {}
 }
 
 message CreateNewEtherIPTunnelEntryRequest {
@@ -32,4 +35,20 @@ message AttachDecapsProgramRequest {
 
 message AttachDecapsProgramResponse {
   AttachDecapsProgramRequest request = 2;
+}
+
+message DetachEncapsProgramRequest {
+  string ifname = 1;
+}
+
+message DetachEncapsProgramResponse {
+  DetachEncapsProgramRequest request = 1;
+}
+
+message DetachDecapsProgramRequest {
+  string ifname = 1;
+}
+
+message DetachDecapsProgramResponse {
+  DetachDecapsProgramRequest request = 1;
 }

@@ -1,6 +1,7 @@
 from concurrent import futures
 import ctypes
 from ctypes import Structure, c_byte, c_uint
+from dataclasses import dataclass
 from ipaddress import IPv6Address, AddressValueError
 
 from bcc import BPF, libbcc
@@ -27,6 +28,19 @@ class TunnelEntry(Structure):
     ]
 
 
+@dataclass
+class DecapsProgramInfo:
+    ifname: str
+    prog: BPF # program attached to specified interface
+
+
+@dataclass
+class EncapsProgramInfo:
+    ifname: str
+    entry_index: int
+    prog: BPF # program attached to specified interface
+
+
 class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
     def __init__(self):
         with open("datastore.c", "r") as f:
@@ -41,8 +55,8 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
         self.ip = pyroute2.IPRoute()
 
-        self.encaps_progs = []
-        self.decaps_progs = []
+        self.encaps_progs = {}
+        self.decaps_progs = {}
 
 
     def ifname2ifindex(self, ifname):
@@ -84,15 +98,28 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
         func = prog.load_func("entrypoint", BPF.XDP)
         prog.attach_xdp(ifname, func, 0)
 
-        self.encaps_progs.append(prog)
-
         # update entry
         ifindex = self.ifname2ifindex(ifname)
         entry = self.entries[c_uint(entry_index)]
-
         entry.ifindex = c_uint(ifindex)
-
         self.entries[c_uint(entry_index)] = entry
+
+        self.encaps_progs[ifname] = EncapsProgramInfo(prog=prog, ifname=ifname, entry_index=entry_index)
+
+
+    def detach_encaps_program(self, ifname):
+        if not ifname in self.encaps_progs:
+            pass
+
+        info = self.encaps_progs[ifname]
+        info.prog.remove_xdp(ifname, 0)
+
+        entry_index = info.entry_index
+        entry = self.entries[c_uint(entry_index)]
+        entry.ifindex = c_uint(0xffffffff)
+        self.entries[c_uint(entry_index)] = entry
+
+        del self.encaps_progs[ifname]
 
 
     def AttachEncapsProgram(self, req, ctx):
@@ -100,6 +127,12 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
         entry_index = int(req.entry_index)
         self.attach_encaps_program(ifname, entry_index)
         return etherip_pb2.AttachEncapsProgramResponse(request=req)
+
+
+    def DetachEncapsProgram(self, req, ctx):
+        ifname = req.ifname
+        self.detach_encaps_program(ifname)
+        return etherip_pb2.DetachEncapsProgramResponse(request=req)
 
 
     def attach_decaps_program(self, ifname):
@@ -110,13 +143,29 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
         func = prog.load_func("entrypoint", BPF.XDP)
         prog.attach_xdp(ifname, func, 0)
 
-        self.decaps_progs.append(prog)
+        self.decaps_progs[ifname] = DecapsProgramInfo(prog=prog, ifname=ifname)
+
+
+    def detach_decaps_program(self, ifname):
+        if not ifname in self.decaps_progs:
+            pass
+
+        info = self.decaps_progs[ifname]
+        info.prog.remove_xdp(ifname, 0)
+
+        del self.decaps_progs[ifname]
 
 
     def AttachDecapsProgram(self, req, ctx):
         ifname = req.ifname
         self.attach_decaps_program(ifname)
         return etherip_pb2.AttachDecapsProgramResponse(request=req)
+
+
+    def DetachDecapsProgram(self, req, ctx):
+        ifname = req.ifname
+        self.detach_decaps_program(ifname)
+        return etherip_pb2.DetachDecapsProgramResponse(request=req)
 
 
 def main():
