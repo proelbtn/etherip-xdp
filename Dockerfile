@@ -8,7 +8,7 @@ RUN pip3 install grpcio-tools poetry pyroute2
 RUN mkdir -p /opt/etherip
 WORKDIR /opt/etherip
 
-COPY src/python/* /opt/etherip
-COPY src/clang/* /opt/etherip
+COPY src/python/*.py /opt/etherip
+COPY src/clang/*.c /opt/etherip
 
 ENTRYPOINT [ "python3", "./main.py" ]
