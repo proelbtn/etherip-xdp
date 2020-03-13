@@ -15,8 +15,8 @@ c_ipv6_addr = c_byte * 16
 
 class TunnelFlow(Structure):
     _fields_ = [
-        ("src", c_ipv6_addr),
-        ("dst", c_ipv6_addr),
+        ("remote_addr", c_ipv6_addr),
+        ("local_addr", c_ipv6_addr),
     ]
 
 
@@ -65,19 +65,19 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
     def CreateNewEtherIPTunnelEntry(self, req, ctx):
         try:
-            src_addr = IPv6Address(req.src_addr)
+            remote_addr = IPv6Address(req.remote_addr)
         except AddressValueError:
             return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
                     result=-1, entry_index=-1, request=req)
 
         try:
-            dst_addr = IPv6Address(req.dst_addr)
+            local_addr = IPv6Address(req.local_addr)
         except AddressValueError:
             return etherip_pb2.CreateNewEtherIPTunnelEntryResponse(
                     result=-1, entry_index=-1, request=req)
 
 
-        flow = TunnelFlow(c_ipv6_addr(*src_addr.packed), c_ipv6_addr(*dst_addr.packed))
+        flow = TunnelFlow(c_ipv6_addr(*remote_addr.packed), c_ipv6_addr(*local_addr.packed))
         entry_index = self.create_new_etherip_tunnel_entry(flow)
 
         if entry_index is None:
@@ -91,10 +91,7 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
     def attach_encaps_program(self, ifname, entry_index):
         with open("encaps.c", "r") as f:
             text = f.read()
-            #prog = BPF(text=text, cflags=["-DENTRY_INDEX=%d" % entry_index])
-
-            text = ("#define ENTRY_INDEX %d\n" % entry_index) + text
-            prog = BPF(text=text)
+            prog = BPF(text=text, cflags=["-DENTRY_INDEX=%d" % entry_index])
 
         func = prog.load_func("entrypoint", BPF.XDP)
         prog.attach_xdp(ifname, func, 0)

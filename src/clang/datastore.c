@@ -4,8 +4,8 @@
 #include <uapi/linux/in6.h>
 
 struct tunnel_flow {
-  struct in6_addr src;
-  struct in6_addr dst;
+  struct in6_addr remote_addr;
+  struct in6_addr local_addr;
 };
 
 struct tunnel_entry {

@@ -7,8 +7,8 @@
 #include <uapi/linux/ipv6.h>
 
 struct tunnel_flow {
-  struct in6_addr src;
-  struct in6_addr dst;
+  struct in6_addr remote_addr;
+  struct in6_addr local_addr;
 };
 
 struct tunnel_entry {
@@ -61,8 +61,8 @@ static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry *entry) {
 	params.family = 10; // AF_INET6
 	params.ifindex = 0;
 
-  copy_ipv6_addr(params.ipv6_src, entry->flow.dst.s6_addr32);
-  copy_ipv6_addr(params.ipv6_dst, entry->flow.src.s6_addr32);
+  copy_ipv6_addr(params.ipv6_src, entry->flow.local_addr.s6_addr32);
+  copy_ipv6_addr(params.ipv6_dst, entry->flow.remote_addr.s6_addr32);
 
 	int ret = bpf_fib_lookup(ctx, &params, sizeof(params), 0);
 	switch (ret) {

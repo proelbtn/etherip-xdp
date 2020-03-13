@@ -2,13 +2,14 @@ syntax = "proto3";
 
 service EtherIP {
   rpc CreateNewEtherIPTunnelEntry (CreateNewEtherIPTunnelEntryRequest) returns (CreateNewEtherIPTunnelEntryResponse) {}
+
   rpc AttachEncapsProgram (AttachEncapsProgramRequest) returns (AttachEncapsProgramResponse) {}
   rpc AttachDecapsProgram (AttachDecapsProgramRequest) returns (AttachDecapsProgramResponse) {}
 }
 
 message CreateNewEtherIPTunnelEntryRequest {
-  string src_addr = 1;
-  string dst_addr = 2;
+  string remote_addr = 3;
+  string local_addr = 4;
 }
 
 message CreateNewEtherIPTunnelEntryResponse {

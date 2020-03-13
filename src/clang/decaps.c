@@ -9,8 +9,8 @@
 #define IFINDEX_INVALID 0xffffffff
 
 struct tunnel_flow {
-  struct in6_addr src;
-  struct in6_addr dst;
+  struct in6_addr remote_addr;
+  struct in6_addr local_addr;
 };
 
 struct tunnel_entry {
