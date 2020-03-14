@@ -9,7 +9,7 @@ def main():
         stub = etherip_pb2_grpc.EtherIPStub(chan)
 
         res = stub.CreateNewEtherIPTunnelEntry(etherip_pb2.CreateNewEtherIPTunnelEntryRequest(
-                remote_addr="2409:252:a00:f200::1111",
+                remote_addr="2403:bd80:c103:a001::1111",
                 local_addr="2400:2410:c0e1:f500:5054:ff:febb:5cfb"))
         print(res)
 
@@ -24,6 +24,7 @@ def main():
                 entry_index=entry_index))
         print(res)
 
+        """
         res = stub.DetachDecapsProgram(etherip_pb2.DetachDecapsProgramRequest(
                 ifname="enp2s0"))
         print(res)
@@ -31,6 +32,7 @@ def main():
         res = stub.DetachEncapsProgram(etherip_pb2.DetachEncapsProgramRequest(
                 ifname="enp3s0"))
         print(res)
+        """
 
 
 if __name__ == "__main__":
