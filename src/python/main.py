@@ -2,6 +2,7 @@ from concurrent import futures
 import ctypes
 from ctypes import Structure, c_byte, c_uint
 from dataclasses import dataclass
+from enum import Enum
 from ipaddress import IPv6Address, AddressValueError
 
 from bcc import BPF, libbcc
@@ -21,8 +22,13 @@ class TunnelFlow(Structure):
     ]
 
 
+class TunnelFlag(Enum):
+    FLAGS_IS_ACTIVE = 1 << 0
+
+
 class TunnelEntry(Structure):
     _fields_ = [
+        ("flags", c_uint),
         ("flow", TunnelFlow),
         ("ifindex", c_uint),
     ]
@@ -69,7 +75,7 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
 
     def create_new_etherip_tunnel_entry(self, flow):
-        entry = TunnelEntry(flow, c_uint(0xffffffff))
+        entry = TunnelEntry(c_uint(0), flow, c_uint(0))
 
         self.entries[c_uint(0)] = entry
         self.lookup_table[flow] = c_uint(0)
@@ -101,6 +107,7 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
         # update entry
         ifindex = self.ifname2ifindex(ifname)
         entry = self.entries[c_uint(entry_index)]
+        entry.flags = c_uint(entry.flags | TunnelFlags.FLAGS_IS_ACTIVE.value)
         entry.ifindex = c_uint(ifindex)
         self.entries[c_uint(entry_index)] = entry
 
@@ -116,7 +123,7 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
 
         entry_index = info.entry_index
         entry = self.entries[c_uint(entry_index)]
-        entry.ifindex = c_uint(0xffffffff)
+        entry.flags = c_uint(entry.flags & ~TunnelFlags.FLAGS_IS_ACTIVE.value)
         self.entries[c_uint(entry_index)] = entry
 
         del self.encaps_progs[ifname]

@@ -6,13 +6,14 @@
 #include <uapi/linux/in6.h>
 #include <uapi/linux/ipv6.h>
 
-struct tunnel_flow {
+struct tunnel_flow_t {
   struct in6_addr remote_addr;
   struct in6_addr local_addr;
 } __attribute__((packed));
 
-struct tunnel_entry {
-  struct tunnel_flow flow;
+struct tunnel_entry_t {
+  __u32 flags;
+  struct tunnel_flow_t flow;
   __u32 ifindex;
 } __attribute__((packed));
 
@@ -31,9 +32,9 @@ struct stats_t {
   __u64 bytes;
 } __attribute__((packed));
 
-BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 16, "/sys/fs/bpf/tunnel_entries");
+BPF_TABLE_PINNED("array", __u32, struct tunnel_entry_t, tunnel_entries, 16, "/sys/fs/bpf/tunnel_entries");
 
-BPF_TABLE_PINNED("hash", struct tunnel_flow, __u32, tunnel_lookup_table, 16, "/sys/fs/bpf/tunnel_lookup_table");
+BPF_TABLE_PINNED("hash", struct tunnel_flow_t, __u32, tunnel_lookup_table, 16, "/sys/fs/bpf/tunnel_lookup_table");
 
 BPF_PERCPU_ARRAY(counters, struct stats_t, STATS_NUM);
 
@@ -47,7 +48,6 @@ static inline void increment_counter(int key, struct xdp_md *ctx) {
   counters.update(&key, counter);
 }
 
-
 static inline void copy_ipv6_addr(__u32 *dst, __u32 *src) {
   for (int i = 0; i < 4; i++) dst[i] = src[i];
 }
@@ -56,7 +56,7 @@ static inline void copy_mac_addr(__u8 *dst, __u8 *src) {
   for (int i = 0; i < 6; i++) dst[i] = src[i];
 }
 
-static int rewrite_packet(struct xdp_md *ctx, struct tunnel_entry *entry, struct bpf_fib_lookup *params) {
+static int rewrite_packet(struct xdp_md *ctx, struct tunnel_entry_t *entry, struct bpf_fib_lookup *params) {
   bpf_xdp_adjust_head(ctx, -(int)(sizeof(struct ethhdr) + sizeof(struct ipv6hdr) + 2));
 
   void *data = (void *)(long)ctx->data;
@@ -90,7 +90,7 @@ static int rewrite_packet(struct xdp_md *ctx, struct tunnel_entry *entry, struct
   return bpf_redirect(params->ifindex, 0);
 }
 
-static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry *entry) {
+static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry_t *entry) {
   struct bpf_fib_lookup params = {};
 	params.family = 10; // AF_INET6
 	params.ifindex = 1;
@@ -118,7 +118,7 @@ static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry *entry) {
 
 int entrypoint(struct xdp_md *ctx) {
   __u32 index = ENTRY_INDEX;
-  struct tunnel_entry *entry;
+  struct tunnel_entry_t *entry;
 
   entry = tunnel_entries.lookup(&index);
   if (entry == NULL) {
