@@ -22,7 +22,7 @@ class TunnelFlow(Structure):
     ]
 
 
-class TunnelFlag(Enum):
+class TunnelFlags(Enum):
     FLAGS_IS_ACTIVE = 1 << 0
 
 
