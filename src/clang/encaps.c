@@ -9,16 +9,44 @@
 struct tunnel_flow {
   struct in6_addr remote_addr;
   struct in6_addr local_addr;
-};
+} __attribute__((packed));
 
 struct tunnel_entry {
   struct tunnel_flow flow;
   __u32 ifindex;
+} __attribute__((packed));
+
+enum stats_key_t {
+  STATS_XDP_DROP,
+  STATS_XDP_PASS,
+  STATS_XDP_REDIRECT,
+  STATS_TOO_SHORT_PKTS,
+  STATS_NO_ENTRY,
+  STATS_LOOKUP_FAILED,
+  STATS_NUM
 };
+
+struct stats_t {
+  __u64 pkts;
+  __u64 bytes;
+} __attribute__((packed));
 
 BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 16, "/sys/fs/bpf/tunnel_entries");
 
 BPF_TABLE_PINNED("hash", struct tunnel_flow, __u32, tunnel_lookup_table, 16, "/sys/fs/bpf/tunnel_lookup_table");
+
+BPF_PERCPU_ARRAY(counters, struct stats_t, STATS_NUM);
+
+static inline void increment_counter(int key, struct xdp_md *ctx) {
+  struct stats_t *counter = counters.lookup(&key);
+  if (counter == NULL) return;
+
+  counter->pkts++;
+  counter->bytes += (__u64)(ctx->data_end - ctx->data);
+
+  counters.update(&key, counter);
+}
+
 
 static inline void copy_ipv6_addr(__u32 *dst, __u32 *src) {
   for (int i = 0; i < 4; i++) dst[i] = src[i];
@@ -37,8 +65,9 @@ static int rewrite_packet(struct xdp_md *ctx, struct tunnel_entry *entry, struct
   struct ethhdr *eth = data;
   struct ipv6hdr *ip6 = (struct ipv6hdr *)(eth + 1);
   __u16 *ei = (__u16 *)(ip6 + 1);
-
   if ((void *)(ei + 1) > data_end) {
+    increment_counter(STATS_TOO_SHORT_PKTS, ctx);
+    increment_counter(STATS_XDP_DROP, ctx);
     return XDP_DROP;
   }
 
@@ -57,9 +86,8 @@ static int rewrite_packet(struct xdp_md *ctx, struct tunnel_entry *entry, struct
   copy_mac_addr(eth->h_source, params->smac);
   copy_mac_addr(eth->h_dest, params->dmac);
 
-  int ret = bpf_redirect(params->ifindex, 0);
-  bpf_trace_printk("encaps: XDP_REDIRECT to ifindex %d => %d\n", params->ifindex, ret);
-  return ret;
+  increment_counter(STATS_XDP_REDIRECT, ctx);
+  return bpf_redirect(params->ifindex, 0);
 }
 
 static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry *entry) {
@@ -80,7 +108,8 @@ static int lookup_nexthop(struct xdp_md *ctx, struct tunnel_entry *entry) {
 		case BPF_FIB_LKUP_RET_PROHIBIT:
 		case BPF_FIB_LKUP_RET_FRAG_NEEDED:
 		case BPF_FIB_LKUP_RET_UNSUPP_LWT:
-      bpf_trace_printk("encaps: lookup failed 2 => %d\n", ret);
+      increment_counter(STATS_LOOKUP_FAILED, ctx);
+      increment_counter(STATS_XDP_DROP, ctx);
 			return XDP_DROP;
 	}
 
@@ -93,7 +122,8 @@ int entrypoint(struct xdp_md *ctx) {
 
   entry = tunnel_entries.lookup(&index);
   if (entry == NULL) {
-    bpf_trace_printk("encaps: lookup failed\n");
+    increment_counter(STATS_NO_ENTRY, ctx);
+    increment_counter(STATS_XDP_DROP, ctx);
     return XDP_DROP;
   }
 

@@ -51,7 +51,7 @@ class EtherIPServicer(etherip_pb2_grpc.EtherIPServicer):
             libbcc.lib.bpf_obj_pin(self.entries.map_fd, ctypes.c_char_p(b"/sys/fs/bpf/tunnel_entries"))
 
             self.lookup_table = self.datastore.get_table("tunnel_lookup_table")
-            libbcc.lib.bpf_obj_pin(self.entries.map_fd, ctypes.c_char_p(b"/sys/fs/bpf/tunnel_lookup_table"))
+            libbcc.lib.bpf_obj_pin(self.lookup_table.map_fd, ctypes.c_char_p(b"/sys/fs/bpf/tunnel_lookup_table"))
 
         self.ip = pyroute2.IPRoute()
 

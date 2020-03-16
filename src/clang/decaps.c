@@ -11,12 +11,12 @@
 struct tunnel_flow {
   struct in6_addr remote_addr;
   struct in6_addr local_addr;
-};
+} __attribute__((packed));
 
 struct tunnel_entry {
   struct tunnel_flow flow;
   __u32 ifindex;
-};
+} __attribute__((packed));
 
 BPF_TABLE_PINNED("array", __u32, struct tunnel_entry, tunnel_entries, 16, "/sys/fs/bpf/tunnel_entries");
 
@@ -56,9 +56,7 @@ static int process_ip6hdr(struct xdp_md *ctx, struct ethhdr *eth) {
     return XDP_PASS;
   }
 
-  __u32 idx = 0;
-
-  struct tunnel_entry *entry = tunnel_entries.lookup(&idx);
+  struct tunnel_entry *entry = tunnel_entries.lookup(idx);
   if (entry == NULL) {
     bpf_trace_printk("lookup failed 2\n");
     return XDP_PASS;
